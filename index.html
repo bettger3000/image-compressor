@@ -87,10 +87,13 @@
             border-radius: 10px;
             padding: 15px;
             margin-bottom: 15px;
+            animation: slideIn 0.3s;
+        }
+
+        .file-content {
             display: flex;
             align-items: center;
             gap: 15px;
-            animation: slideIn 0.3s;
         }
 
         @keyframes slideIn {
@@ -222,6 +225,95 @@
             transform: none;
         }
 
+        .image-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 1000;
+            padding: 20px;
+            overflow: auto;
+        }
+
+        .image-modal.active {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 30px;
+            color: white;
+            cursor: pointer;
+            z-index: 1001;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+        }
+
+        .modal-image {
+            max-width: 90%;
+            max-height: 70vh;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .save-instruction {
+            color: white;
+            text-align: center;
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(102, 126, 234, 0.9);
+            border-radius: 10px;
+            font-size: 16px;
+            max-width: 90%;
+        }
+
+        .save-instruction-icon {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .preview-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: transform 0.2s;
+        }
+
+        .preview-button:hover {
+            transform: scale(1.02);
+        }
+
+        .desktop-only {
+            display: block;
+        }
+
+        .mobile-only {
+            display: none;
+        }
+
         @media (max-width: 600px) {
             .container {
                 padding: 20px;
@@ -235,7 +327,7 @@
                 padding: 40px 15px;
             }
 
-            .file-item {
+            .file-content {
                 flex-direction: column;
                 text-align: center;
             }
@@ -251,6 +343,14 @@
 
             .batch-btn {
                 width: 100%;
+            }
+
+            .desktop-only {
+                display: none;
+            }
+
+            .mobile-only {
+                display: block;
             }
         }
 
@@ -294,6 +394,16 @@
         </div>
     </div>
 
+    <div class="image-modal" id="imageModal">
+        <span class="modal-close" id="modalClose">&times;</span>
+        <img class="modal-image" id="modalImage" alt="圧縮済み画像">
+        <div class="save-instruction">
+            <div class="save-instruction-icon">👇</div>
+            <div><strong>画像を長押しして「写真に保存」</strong></div>
+            <div style="font-size: 14px; margin-top: 5px; opacity: 0.9;">または画像をタップして保存メニューを開く</div>
+        </div>
+    </div>
+
     <script>
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
@@ -301,8 +411,22 @@
         const batchActions = document.getElementById('batchActions');
         const downloadAllBtn = document.getElementById('downloadAllBtn');
         const clearBtn = document.getElementById('clearBtn');
+        const imageModal = document.getElementById('imageModal');
+        const modalImage = document.getElementById('modalImage');
+        const modalClose = document.getElementById('modalClose');
 
         let processedFiles = [];
+
+        // モーダル制御
+        modalClose.addEventListener('click', () => {
+            imageModal.classList.remove('active');
+        });
+
+        imageModal.addEventListener('click', (e) => {
+            if (e.target === imageModal) {
+                imageModal.classList.remove('active');
+            }
+        });
 
         // ドラッグ&ドロップの設定
         uploadArea.addEventListener('click', () => fileInput.click());
@@ -433,20 +557,22 @@
             const reader = new FileReader();
             reader.onload = (e) => {
                 div.innerHTML = `
-                    <img src="${e.target.result}" class="file-preview" alt="preview">
-                    <div class="file-info">
-                        <div class="file-name">${file.name}</div>
-                        <div class="file-size">元のサイズ: ${formatFileSize(file.size)}</div>
-                        <div class="file-status">
-                            <span class="status-processing">
-                                <span class="loading-spinner"></span> 圧縮中...
-                            </span>
+                    <div class="file-content">
+                        <img src="${e.target.result}" class="file-preview" alt="preview">
+                        <div class="file-info">
+                            <div class="file-name">${file.name}</div>
+                            <div class="file-size">元のサイズ: ${formatFileSize(file.size)}</div>
+                            <div class="file-status">
+                                <span class="status-processing">
+                                    <span class="loading-spinner"></span> 圧縮中...
+                                </span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 50%"></div>
+                            </div>
                         </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: 50%"></div>
-                        </div>
+                        <button class="download-btn desktop-only" disabled>処理中...</button>
                     </div>
-                    <button class="download-btn" disabled>処理中...</button>
                 `;
             };
             reader.readAsDataURL(file);
@@ -460,6 +586,7 @@
             const statusEl = fileItem.querySelector('.file-status');
             const downloadBtn = fileItem.querySelector('.download-btn');
             const progressBar = fileItem.querySelector('.progress-bar');
+            const fileInfo = fileItem.querySelector('.file-info');
 
             if (status === 'complete' && blob) {
                 const reduction = Math.round((1 - blob.size / originalSize) * 100);
@@ -471,9 +598,33 @@
                 `;
                 progressBar.style.display = 'none';
                 
+                // デスクトップ用ダウンロードボタン
                 downloadBtn.disabled = false;
                 downloadBtn.textContent = 'ダウンロード';
                 downloadBtn.onclick = () => downloadFile(blob, fileItem.querySelector('.file-name').textContent);
+                
+                // モバイル用プレビューボタンを追加
+                const previewBtn = document.createElement('button');
+                previewBtn.className = 'preview-button mobile-only';
+                previewBtn.innerHTML = '📱 写真に保存する';
+                previewBtn.onclick = () => {
+                    const blobUrl = URL.createObjectURL(blob);
+                    modalImage.src = blobUrl;
+                    imageModal.classList.add('active');
+                };
+                fileInfo.appendChild(previewBtn);
+
+                // デスクトップでもプレビューボタンを追加（オプション）
+                const desktopPreviewBtn = document.createElement('button');
+                desktopPreviewBtn.className = 'preview-button desktop-only';
+                desktopPreviewBtn.style.marginTop = '10px';
+                desktopPreviewBtn.innerHTML = '🔍 プレビュー表示';
+                desktopPreviewBtn.onclick = () => {
+                    const blobUrl = URL.createObjectURL(blob);
+                    modalImage.src = blobUrl;
+                    imageModal.classList.add('active');
+                };
+                fileItem.querySelector('.file-content').appendChild(desktopPreviewBtn);
                 
             } else if (status === 'error') {
                 statusEl.innerHTML = '<span class="status-error">❌ エラーが発生しました</span>';
