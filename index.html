@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>画像圧縮ツール - 200KB以下に自動圧縮</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 50px 20px;
+            text-align: center;
+            background: #f8f9ff;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .upload-area.dragover {
+            background: #e8ebff;
+            border-color: #4c5fd8;
+        }
+
+        .upload-icon {
+            font-size: 60px;
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            color: #666;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .upload-subtext {
+            color: #999;
+            font-size: 14px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-list {
+            margin-top: 30px;
+        }
+
+        .file-item {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .file-preview {
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+            object-fit: cover;
+            background: #fff;
+        }
+
+        .file-info {
+            flex: 1;
+        }
+
+        .file-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .file-size {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .file-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        .status-processing {
+            color: #f39c12;
+            font-size: 14px;
+        }
+
+        .status-complete {
+            color: #27ae60;
+            font-size: 14px;
+        }
+
+        .status-error {
+            color: #e74c3c;
+            font-size: 14px;
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: transform 0.2s;
+        }
+
+        .download-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .download-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .batch-actions {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .batch-btn {
+            padding: 12px 30px;
+            border-radius: 8px;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .download-all-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .clear-btn {
+            background: #f5f5f5;
+            color: #666;
+        }
+
+        .batch-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .batch-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .upload-area {
+                padding: 40px 15px;
+            }
+
+            .file-item {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .file-preview {
+                width: 100px;
+                height: 100px;
+            }
+
+            .batch-actions {
+                flex-direction: column;
+            }
+
+            .batch-btn {
+                width: 100%;
+            }
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖼️ 画像圧縮ツール</h1>
+        <p class="subtitle">画像を自動的に200KB以下に圧縮します</p>
+        
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">クリックして画像を選択</div>
+            <div class="upload-subtext">またはドラッグ&ドロップ</div>
+            <input type="file" id="fileInput" multiple accept="image/*">
+        </div>
+
+        <div class="file-list" id="fileList"></div>
+
+        <div class="batch-actions" id="batchActions" style="display: none;">
+            <button class="batch-btn download-all-btn" id="downloadAllBtn">
+                すべてダウンロード
+            </button>
+            <button class="batch-btn clear-btn" id="clearBtn">
+                クリア
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const batchActions = document.getElementById('batchActions');
+        const downloadAllBtn = document.getElementById('downloadAllBtn');
+        const clearBtn = document.getElementById('clearBtn');
+
+        let processedFiles = [];
+
+        // ドラッグ&ドロップの設定
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        // ファイル処理
+        function handleFiles(files) {
+            Array.from(files).forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    processImage(file);
+                }
+            });
+            batchActions.style.display = 'flex';
+        }
+
+        // 画像圧縮処理
+        async function processImage(file) {
+            const fileId = Date.now() + Math.random();
+            const originalSize = file.size;
+            
+            // UIに追加
+            const fileItem = createFileItem(file, fileId);
+            fileList.appendChild(fileItem);
+
+            try {
+                // 画像を読み込み
+                const img = await loadImage(file);
+                
+                // 圧縮処理
+                const compressedBlob = await compressImage(img, file.type, originalSize);
+                
+                // 成功時の処理
+                updateFileStatus(fileId, 'complete', compressedBlob, originalSize);
+                
+                // 処理済みファイルリストに追加
+                processedFiles.push({
+                    id: fileId,
+                    name: file.name,
+                    blob: compressedBlob
+                });
+
+            } catch (error) {
+                updateFileStatus(fileId, 'error');
+                console.error('圧縮エラー:', error);
+            }
+        }
+
+        // 画像読み込み
+        function loadImage(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = reject;
+                    img.src = e.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // 画像圧縮
+        async function compressImage(img, mimeType, originalSize) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            const targetSize = 200 * 1024; // 200KB
+            let width = img.width;
+            let height = img.height;
+            let quality = 0.9;
+            let blob;
+
+            // JPEGに変換（PNGより圧縮率が高い）
+            const outputType = mimeType === 'image/png' ? 'image/jpeg' : mimeType;
+
+            // 段階的に圧縮
+            for (let scale = 1; scale >= 0.3; scale -= 0.1) {
+                canvas.width = width * scale;
+                canvas.height = height * scale;
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                for (quality = 0.9; quality >= 0.1; quality -= 0.1) {
+                    blob = await new Promise(resolve => {
+                        canvas.toBlob(resolve, outputType, quality);
+                    });
+
+                    if (blob.size <= targetSize) {
+                        return blob;
+                    }
+                }
+            }
+
+            // 最終手段：最小サイズで返す
+            canvas.width = width * 0.3;
+            canvas.height = height * 0.3;
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            
+            return new Promise(resolve => {
+                canvas.toBlob(resolve, outputType, 0.1);
+            });
+        }
+
+        // ファイルアイテムを作成
+        function createFileItem(file, fileId) {
+            const div = document.createElement('div');
+            div.className = 'file-item';
+            div.id = `file-${fileId}`;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                div.innerHTML = `
+                    <img src="${e.target.result}" class="file-preview" alt="preview">
+                    <div class="file-info">
+                        <div class="file-name">${file.name}</div>
+                        <div class="file-size">元のサイズ: ${formatFileSize(file.size)}</div>
+                        <div class="file-status">
+                            <span class="status-processing">
+                                <span class="loading-spinner"></span> 圧縮中...
+                            </span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 50%"></div>
+                        </div>
+                    </div>
+                    <button class="download-btn" disabled>処理中...</button>
+                `;
+            };
+            reader.readAsDataURL(file);
+            
+            return div;
+        }
+
+        // ステータス更新
+        function updateFileStatus(fileId, status, blob = null, originalSize = 0) {
+            const fileItem = document.getElementById(`file-${fileId}`);
+            const statusEl = fileItem.querySelector('.file-status');
+            const downloadBtn = fileItem.querySelector('.download-btn');
+            const progressBar = fileItem.querySelector('.progress-bar');
+
+            if (status === 'complete' && blob) {
+                const reduction = Math.round((1 - blob.size / originalSize) * 100);
+                statusEl.innerHTML = `
+                    <span class="status-complete">✅ 完了</span>
+                    <span style="color: #666; font-size: 14px;">
+                        ${formatFileSize(blob.size)} (${reduction}%削減)
+                    </span>
+                `;
+                progressBar.style.display = 'none';
+                
+                downloadBtn.disabled = false;
+                downloadBtn.textContent = 'ダウンロード';
+                downloadBtn.onclick = () => downloadFile(blob, fileItem.querySelector('.file-name').textContent);
+                
+            } else if (status === 'error') {
+                statusEl.innerHTML = '<span class="status-error">❌ エラーが発生しました</span>';
+                progressBar.style.display = 'none';
+                downloadBtn.textContent = 'エラー';
+            }
+        }
+
+        // ファイルサイズフォーマット
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        // ファイルダウンロード
+        function downloadFile(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'compressed_' + filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // すべてダウンロード
+        downloadAllBtn.addEventListener('click', () => {
+            processedFiles.forEach(file => {
+                downloadFile(file.blob, file.name);
+            });
+        });
+
+        // クリア
+        clearBtn.addEventListener('click', () => {
+            fileList.innerHTML = '';
+            processedFiles = [];
+            batchActions.style.display = 'none';
+            fileInput.value = '';
+        });
+    </script>
+</body>
+</html>
